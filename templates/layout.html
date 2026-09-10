@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {% if title %}
+    <title>FastAPI Blog - {{ title }}</title>
+    {% else %}
+    <title>FastAPI Blog</title>
+    {% endif %}
+    <meta name="description" content="FastAPI Tutorial" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Nunito:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/main.css" />
+    <meta name="theme-color" content="#527c9f" />
+  </head>
+  <body class="site-body">
+    <header class="site-header">
+      <nav class="site-nav">
+        <div class="container nav-inner">
+          <a class="brand" href="#">FastAPI Blog</a
+          ><button
+            class="nav-toggle"
+            type="button"
+            aria-controls="navbarToggle"
+            aria-expanded="false"
+            aria-label="Open navigation"
+          >
+            <span></span><span></span><span></span>
+          </button>
+          <div class="nav-menu" id="navbarToggle">
+            <div class="nav-links">
+              <a class="nav-link active" href="#">Home</a>
+            </div>
+            <div class="nav-actions">
+              <a class="button button-outline" href="#">Login</a
+              ><a class="button button-light" href="#">Register</a>
+              <div class="theme-picker">
+                <a
+                  class="nav-link theme-toggle"
+                  href="#"
+                  id="bd-theme"
+                  aria-expanded="false"
+                  ><span id="bd-theme-text">🌗 Auto</span></a
+                >
+                <ul class="theme-menu">
+                  <li>
+                    <button class="theme-option" data-theme-value="light">
+                      🌝 Light
+                    </button>
+                  </li>
+                  <li>
+                    <button class="theme-option" data-theme-value="dark">
+                      🌚 Dark
+                    </button>
+                  </li>
+                  <li>
+                    <button class="theme-option" data-theme-value="auto">
+                      🌗 Auto
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+    <main class="container page-content">
+      <div class="page-grid">
+        <div class="posts-column">
+          {% block content %}{% endblock content %}
+        </div>
+        <aside class="sidebar">
+          <div class="content-section sidebar-card">
+            <h3>Our Sidebar</h3>
+            <p class="muted-text">
+              You can put any information here you'd like.
+            </p>
+            <ul class="sidebar-list">
+              <li>Latest Posts</li>
+              <li>Announcements</li>
+              <li>Calendars</li>
+              <li>etc</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </main>
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p class="muted-text">© <span id="year"></span> Corey Schafer</p>
+      </div>
+    </footer>
+    <script>
+      document.getElementById("year").textContent = new Date().getFullYear();
+      const root = document.documentElement;
+      const setTheme = (t) => {
+        root.dataset.theme = t;
+        localStorage.setItem("theme", t);
+        document.getElementById("bd-theme-text").textContent = {
+          light: "🌝 Light",
+          dark: "🌚 Dark",
+          auto: "🌗 Auto",
+        }[t];
+      };
+      document
+        .querySelectorAll("[data-theme-value]")
+        .forEach((b) =>
+          b.addEventListener("click", () => setTheme(b.dataset.themeValue)),
+        );
+      const toggle = document.querySelector(".nav-toggle"),
+        menu = document.querySelector(".nav-menu");
+      toggle.addEventListener("click", () => {
+        const open = menu.classList.toggle("is-open");
+        toggle.setAttribute("aria-expanded", open);
+      });
+      const picker = document.querySelector(".theme-picker");
+      document.querySelector(".theme-toggle").addEventListener("click", (e) => {
+        e.preventDefault();
+        const open = picker.classList.toggle("is-open");
+        e.currentTarget.setAttribute("aria-expanded", open);
+      });
+      setTheme(localStorage.getItem("theme") || "auto");
+    </script>
+  </body>
+</html>

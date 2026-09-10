@@ -1,0 +1,260 @@
+:root {
+  color-scheme: light;
+  --primary: #527c9f;
+  --background: #f5f7f9;
+  --surface: #fff;
+  --text: #26333d;
+  --muted: #687782;
+  --border: #d9e0e5;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #17212b;
+  --surface: #22303c;
+  --text: #e7edf2;
+  --muted: #afbdc8;
+  --border: #40515e;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: Nunito, sans-serif;
+  background: var(--background);
+  color: var(--text);
+}
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+.site-body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.container {
+  width: min(1140px, calc(100% - 2rem));
+  margin: auto;
+}
+.site-header {
+  height: 64px;
+}
+.site-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 10;
+  background: var(--primary);
+  box-shadow: 0 2px 8px #0002;
+}
+.nav-inner {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+.brand {
+  color: #fff;
+  font:
+    700 1.4rem Montserrat,
+    sans-serif;
+  white-space: nowrap;
+}
+.nav-menu,
+.nav-actions,
+.nav-links {
+  display: flex;
+  align-items: center;
+}
+.nav-menu {
+  flex: 1;
+  justify-content: space-between;
+}
+.nav-actions {
+  gap: 0.6rem;
+}
+.nav-link {
+  color: #fff;
+  display: block;
+  padding: 0.55rem 0.75rem;
+}
+.nav-link:hover,
+.nav-link.active {
+  color: #dcecf8;
+  text-decoration: none;
+}
+.button {
+  border: 1px solid #fff;
+  border-radius: 4px;
+  padding: 0.45rem 0.85rem;
+  font-weight: 700;
+}
+.button-outline {
+  color: #fff;
+}
+.button-light {
+  color: var(--primary);
+  background: #fff;
+}
+.nav-toggle {
+  display: none;
+}
+.theme-picker {
+  position: relative;
+}
+.theme-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  min-width: 130px;
+  padding: 0.35rem 0;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+.theme-picker.is-open .theme-menu {
+  display: block;
+}
+.theme-option {
+  width: 100%;
+  padding: 0.5rem 0.8rem;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.page-content {
+  flex: 1;
+  padding: 2rem 0;
+}
+.page-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+  gap: 2rem;
+}
+.content-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+.post-card {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.post-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+.article-img {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.post-body {
+  min-width: 0;
+  flex: 1;
+}
+.article-metadata {
+  margin-bottom: 0.5rem;
+}
+.article-metadata a {
+  margin-right: 0.5rem;
+  font-weight: 700;
+}
+.article-title {
+  color: var(--text);
+}
+.article-content {
+  line-height: 1.6;
+}
+.muted-text {
+  color: var(--muted);
+}
+.sidebar-card {
+  padding: 1rem 1.5rem;
+}
+.sidebar-list {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.sidebar-list li {
+  padding: 0.65rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-list li:last-child {
+  border: 0;
+}
+.site-footer {
+  padding: 1rem 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.footer-inner {
+  text-align: center;
+}
+.footer-inner p {
+  margin: 0;
+}
+@media (max-width: 767px) {
+  .nav-toggle {
+    display: block;
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid #fff;
+    padding: 0.4rem;
+  }
+  .nav-toggle span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    margin: 4px;
+    background: #fff;
+  }
+  .nav-menu {
+    display: none;
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    background: var(--primary);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .nav-menu.is-open {
+    display: flex;
+  }
+  .nav-links,
+  .nav-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nav-actions {
+    gap: 0.5rem;
+  }
+  .button,
+  .theme-toggle {
+    text-align: center;
+  }
+  .theme-menu {
+    position: static;
+    width: 100%;
+  }
+  .page-grid {
+    grid-template-columns: 1fr;
+  }
+}
