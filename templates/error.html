@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block content %}
+  <article class="content-section error-card">
+    <h1>
+      <a class="article-title" href="#">Oops... {{ status_code }} Error</a>
+    </h1>
+    <p class="article-content">{{ message }}</p>
+  </article>
+{% endblock content %}
