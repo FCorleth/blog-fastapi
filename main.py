@@ -20,38 +20,8 @@ from database import Base, engine, get_db
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/media", StaticFiles(directory="media"), name="media")
 
 templates = Jinja2Templates(directory="templates")
-
-@app.get("/", include_in_schema=False)
-def home(req: Request, db: Annotated[Session, Depends(get_db)]):
-    posts = db.execute(select(models.Post)).scalars().all()
-
-    return templates.TemplateResponse(req, "home.html", {"posts": posts, "title": "Home"})
-
-@app.get("/post/{post_id}", include_in_schema=False)
-def post_page(req: Request, post_id: int, db: Annotated[Session, Depends(get_db)]):
-    posts = db.execute(select(models.Post)).scalars().all()
-
-    for post in posts:
-        if post.id == post_id:
-            title = post.title[:50]
-            return templates.TemplateResponse(
-                req,
-                "post.html",
-                {
-                    "post": post,
-                    "title":title
-                }
-            )
-        
-    raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Post not found"
-    )
-
 
 @app.get("/api/posts", response_model=list[PostResponse])
 def get_posts(db:Annotated[Session, Depends(get_db)]):
