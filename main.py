@@ -7,11 +7,11 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.status import HTTP_200_OK, HTTP_404_NOT_FOUND
+from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 
-from schemas import PostCreate, PostResponse, UserResponse, UserCreate
+from schemas import PostCreate, PostResponse, PostUpdate, UserResponse, UserCreate
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 import models
@@ -40,7 +40,66 @@ def get_post(req: Request, post_id: int, db: Annotated[Session, Depends(get_db)]
         )
 
     return post
-   
+
+@app.put("/api/posts/{post_id}", response_model=PostResponse)
+def update_post_full(post_id: int, post_data: PostCreate, db: Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.Post).where(models.Post.id == post_id))
+    post = result.scalars().first()
+
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+
+    if post_data.user_id != post.user_id:
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail="User ID is diferent"
+        )
+
+    post.title = post_data.title
+    post.content = post_data.title
+    post.user_id = post_data.user_id
+
+    db.commit()
+    db.refresh(post)
+    
+    return post
+
+@app.patch("/api/posts/{post_id}", response_model=PostResponse)
+def update_post_partial(post_id: int, post_data: PostUpdate, db:Annotated[Session,Depends(get_db)]):
+    result = db.execute(select(models.Post).where(models.Post.id == post_id))
+    post = result.scalars().first()
+
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found",
+        )
+
+    update_data = post_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(post, field, value)
+  
+    db.commit()
+    db.refresh(post)
+
+    return post
+
+@app.delete("/api/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(post_id: int, db: Annotated[Session, Depends(get_db)]):
+    post = db.execute(select(models.Post).where(models.Post.id == post_id)).scalars().first()
+
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found",
+        )
+
+    db.delete(post)
+    db.commit()
+    
 @app.get("/api/users/{user_id}", response_model=UserResponse, status_code=HTTP_200_OK)
 def get_user(user_id:int, db: Annotated[Session, Depends(get_db)]):
     result = db.execute(select(models.User).where(models.User.id == user_id))

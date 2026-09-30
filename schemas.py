@@ -22,6 +22,9 @@ class PostBase(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     content: str = Field(min_length=1)
 
+class PostUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=100)
+    content: str | None = Field(default=None, min_length=1)
 
 class PostCreate(PostBase):
     user_id: int
@@ -34,4 +37,3 @@ class PostResponse(PostBase):
     user_id: int
     date_posted: datetime
     author: UserResponse
-    
