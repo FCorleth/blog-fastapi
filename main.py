@@ -9,9 +9,9 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 
-from schemas import PostCreate, PostResponse, PostUpdate, UserResponse, UserCreate
+from schemas import PostCreate, PostResponse, PostUpdate, UserResponse, UserCreate, UserUpdate
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 import models
@@ -108,13 +108,13 @@ def get_user(user_id:int, db: Annotated[Session, Depends(get_db)]):
 
     if not user:
         raise HTTPException(
-            status_code=HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
 
     return user
 
-@app.post("/api/user", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/api/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Annotated[Session, Depends(get_db)]):
     username_result = db.execute(select(models.User).where(models.User.username == user.username))
     existing_user = username_result.scalars().first()
@@ -144,6 +144,68 @@ def create_user(user: UserCreate, db: Annotated[Session, Depends(get_db)]):
     db.refresh(new_user)
 
     return new_user
+
+@app.patch("/api/users/{user_id}", response_model=UserResponse)
+def update_user(user_id: int, user_data: UserUpdate, db: Annotated[Session, Depends(get_db)]):
+    user = db.execute(select(models.User).where(models.User.id == user_id)).scalars().first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='User not found'
+        )
+
+    if user_data.username:
+        username_already_exist = db.execute(
+            select(models.User).where(
+                models.User.username == user_data.username,
+                models.User.id != user_id
+            )
+        ).scalars.first()
+
+        if username_already_exist:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Username already exists"
+            )
+
+        user.username = user_data.username
+
+    if user_data.email:
+        email_already_exist = db.execute(
+            select(models.User).where(
+                models.User.email == user_data.email,
+                models.User.id != user_id
+            )
+        ).scalars().first()
+
+        if email_already_exist:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already exists"
+            )
+
+        user.email = user_data.email
+    
+    if user_data.image_file:
+        user.image_file = user_data.image_file
+
+    db.commit()
+
+    return user
+
+@app.delete("/api/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
+    user = db.execute(select(models.User).where(models.User.id == user_id)).scalars().first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    db.delete(user)
+    db.commit()
 
 @app.get("/api/users/{user_id}/post", response_model=list[PostResponse])
 def get_user_posts(user_id: int, db: Annotated[Session, Depends(get_db)]):
