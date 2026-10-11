@@ -58,7 +58,7 @@ async def update_post_full(post_id: int, post_data: PostCreate, db: Annotated[As
 
     if post_data.user_id != post.user_id:
         raise HTTPException(
-            status_code=HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="User ID is diferent"
         )
 

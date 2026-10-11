@@ -10,13 +10,20 @@ import models
 from database import get_db
 from schemas import PostResponse, UserCreate, UserResponse, UserUpdate
 
+from repositories.users import (
+    get_user_by_id,
+    get_user_by_email,
+    get_user_by_username,
+    create_user as create_user_repo,
+    delete_user as delete_user_repo,
+    save_user,
+)
+
 router = APIRouter()
 
 @router.post("",response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_db)]):
-    existing_user = (
-        await db.execute(select(models.User).where(models.User.username == user.username))
-    ).scalars().first()
+    existing_user = await get_user_by_username(user.username, db)
 
     if existing_user:
         raise HTTPException(
@@ -24,9 +31,7 @@ async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_
             detail="Username already exists",
         )
 
-    existing_email = (
-        await db.execute(select(models.User).where(models.User.email == user.email))
-    ).scalars().first()
+    existing_email = await get_user_by_email(user.email, db)
 
     if existing_email:
         raise HTTPException(
@@ -34,22 +39,13 @@ async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_
             detail="Email already exists",
         )
 
-    new_user = models.User(
-        username=user.username,
-        email=user.email,
-    )
-
-    db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
+    new_user = await create_user_repo(user.username, user.email, db)
 
     return new_user
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(user_id:int, db: Annotated[AsyncSession, Depends(get_db)]):
-    user = (
-        await db.execute(select(models.User).where(models.User.id == user_id))
-    ).scalars().first()
+    user = await get_user_by_id(user_id, db)
 
     if not user:
         raise HTTPException(
@@ -61,9 +57,7 @@ async def get_user(user_id:int, db: Annotated[AsyncSession, Depends(get_db)]):
 
 @router.patch("/{user_id}", response_model=UserResponse)
 async def update_user(user_id: int, user_data: UserUpdate, db: Annotated[AsyncSession, Depends(get_db)]):
-    user = (
-        await db.execute(select(models.User).where(models.User.id == user_id))
-    ).scalars().first()
+    user = await get_user_by_id(user_id, db)
 
     if not user:
         raise HTTPException(
@@ -72,16 +66,9 @@ async def update_user(user_id: int, user_data: UserUpdate, db: Annotated[AsyncSe
         )
 
     if user_data.username:
-        username_already_exist = (
-            await db.execute(
-                select(models.User).where(
-                    models.User.username == user_data.username,
-                    models.User.id != user_id
-                )
-            )
-        ).scalars().first()
+        username_already_exist = await get_user_by_username(user_data.username, db)
 
-        if username_already_exist:
+        if username_already_exist and username_already_exist.id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Username already exists"
@@ -90,16 +77,9 @@ async def update_user(user_id: int, user_data: UserUpdate, db: Annotated[AsyncSe
         user.username = user_data.username
 
     if user_data.email:
-        email_already_exist = (
-            await db.execute(
-                select(models.User).where(
-                    models.User.email == user_data.email,
-                    models.User.id != user_id
-                )
-            )
-        ).scalars().first()
+        email_already_exist = await get_user_by_email(user_data.email, db)
 
-        if email_already_exist:
+        if email_already_exist and email_already_exist.id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Email already exists"
@@ -110,15 +90,11 @@ async def update_user(user_id: int, user_data: UserUpdate, db: Annotated[AsyncSe
     if user_data.image_file:
         user.image_file = user_data.image_file
 
-    await db.commit()
-
-    return user
+    return await save_user(user, db)
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
-    user = (
-        await db.execute(select(models.User).where(models.User.id == user_id))
-    ).scalars().first()
+    user = await get_user_by_id(user_id, db)
 
     if not user:
         raise HTTPException(
@@ -126,14 +102,11 @@ async def delete_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]
             detail="User not found"
         )
 
-    await db.delete(user)
-    await db.commit()
+    await delete_user_repo(user, db)
 
 @router.get("/{user_id}/post", response_model=list[PostResponse])
 async def get_user_posts(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
-    user = (
-        await db.execute(select(models.User).where(models.User.id == user_id))
-    ).scalars().first()
+    user = await get_user_by_id(user_id, db)
 
     if not user:
         raise HTTPException(
