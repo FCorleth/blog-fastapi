@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 import models
 
 
-async def get_posts(db: AsyncSession) -> list[models.Post]:
+async def get_posts_repo(db: AsyncSession) -> list[models.Post]:
     posts = (
         await db.execute(
             select(models.Post).options(selectinload(models.Post.author))
@@ -14,7 +14,7 @@ async def get_posts(db: AsyncSession) -> list[models.Post]:
     return list(posts)
 
 
-async def get_post_by_id(post_id: int, db: AsyncSession) -> models.Post | None:
+async def get_post_by_id_repo(post_id: int, db: AsyncSession) -> models.Post | None:
     post = (
         await db.execute(
             select(models.Post)
@@ -25,7 +25,7 @@ async def get_post_by_id(post_id: int, db: AsyncSession) -> models.Post | None:
     return post
 
 
-async def get_posts_by_user_id(user_id: int, db: AsyncSession) -> list[models.Post]:
+async def get_posts_by_user_id_repo(user_id: int, db: AsyncSession) -> list[models.Post]:
     posts = (
         await db.execute(
             select(models.Post)
@@ -36,7 +36,7 @@ async def get_posts_by_user_id(user_id: int, db: AsyncSession) -> list[models.Po
     return list(posts)
 
 
-async def create_post(
+async def create_post_repo(
     title: str, content: str, user_id: int, db: AsyncSession
 ) -> models.Post:
     post = models.Post(
@@ -50,12 +50,12 @@ async def create_post(
     return post
 
 
-async def save_post(post: models.Post, db: AsyncSession) -> models.Post:
+async def save_post_repo(post: models.Post, db: AsyncSession) -> models.Post:
     await db.commit()
     await db.refresh(post, attribute_names=["author"])
     return post
 
 
-async def delete_post(post: models.Post, db: AsyncSession) -> None:
+async def delete_post_repo(post: models.Post, db: AsyncSession) -> None:
     await db.delete(post)
     await db.commit()
