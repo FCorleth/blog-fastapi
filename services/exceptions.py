@@ -12,3 +12,8 @@ class BadRequestError(Exception):
     def __init__(self, detail: str = "Bad request"):
         self.detail = detail
         super().__init__(detail)
+
+class UnauthorizedError(Exception):
+    def __init__(self, detail: str = "Unauthorized"):
+        self.detail = detail
+        super().__init__(detail)
