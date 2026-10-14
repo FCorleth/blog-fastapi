@@ -7,10 +7,9 @@ from repositories import posts, users
 
 import models
 from schemas import Token, UserUpdate
-from services.exceptions import ConflictError, NotFoundError, UnauthorizedError
+from services.exceptions import ConflictError, ForbiddenError, NotFoundError, UnauthorizedError
 
 from auth import (
-    oauth2_scheme,
     create_access_token,
     hash_password,
     verify_access_token,
@@ -82,12 +81,18 @@ async def create_user_service(
 
 
 async def update_user_service(
-    user_id: int, user_data: UserUpdate, db: AsyncSession
+    user_id: int,
+    user_data: UserUpdate,
+    current_user: models.User,
+    db: AsyncSession,
 ) -> models.User:
     user = await users.get_user_by_id_repo(user_id, db)
 
     if not user:
         raise NotFoundError("User not found")
+
+    if user.id != current_user.id:
+        raise ForbiddenError("Not authorized to update this user")
 
     if user_data.username:
         username_already_exist = await users.get_user_by_username_repo(
@@ -113,11 +118,14 @@ async def update_user_service(
     return await users.save_user_repo(user, db)
 
 
-async def delete_user_service(user_id: int, db: AsyncSession) -> None:
+async def delete_user_service(user_id: int, current_user: models.User, db: AsyncSession) -> None:
     user = await users.get_user_by_id_repo(user_id, db)
 
     if not user:
         raise NotFoundError("User not found")
+
+    if user.id != current_user.id:
+        raise ForbiddenError("Not authorized to delete this user")
 
     await users.delete_user_repo(user, db)
 

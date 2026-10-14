@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth import oauth2_scheme
+from auth import CurrentUser
 from database import get_db
 from schemas import PostResponse, UserCreate, UserPublic, UserPrivate, UserUpdate, Token
 from services import users
-from services.exceptions import ConflictError, NotFoundError, UnauthorizedError
+from services.exceptions import ConflictError, ForbiddenError, NotFoundError, UnauthorizedError
 
 router = APIRouter()
 
@@ -41,18 +41,8 @@ async def login(
 
 
 @router.get("/me", response_model=UserPrivate)
-async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    db: Annotated[AsyncSession, Depends(get_db)]
-):
-    try:
-        return await users.get_current_user_service(token, db)
-    except UnauthorizedError as exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=exception.detail,
-            headers={"WWW-Authenticate": "Bearer"},
-    )
+async def get_current_user(current_user: CurrentUser):
+   return current_user
 
 
 @router.get("/{user_id}", response_model=UserPublic)
@@ -68,10 +58,10 @@ async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
 
 @router.patch("/{user_id}", response_model=UserPrivate)
 async def update_user(
-    user_id: int, user_data: UserUpdate, db: Annotated[AsyncSession, Depends(get_db)]
+    user_id: int, user_data: UserUpdate, current_user: CurrentUser,db: Annotated[AsyncSession, Depends(get_db)]
 ):
     try:
-        return await users.update_user_service(user_id, user_data, db)
+        return await users.update_user_service(user_id, user_data, current_user, db)
     except NotFoundError as exception:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -82,16 +72,30 @@ async def update_user(
             status_code=status.HTTP_409_CONFLICT,
             detail=exception.detail,
         )
+    except ForbiddenError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=exception.detail
+        )
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+async def delete_user(
+    user_id: int,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
     try:
-        return await users.delete_user_service(user_id, db)
+        return await users.delete_user_service(user_id, current_user, db)
     except NotFoundError as exception:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=exception.detail,
+        )
+    except ForbiddenError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=exception.detail
         )
 
 
