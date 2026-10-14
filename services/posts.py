@@ -4,7 +4,7 @@ from repositories import posts, users
 
 import models
 from schemas import PostCreate, PostUpdate
-from services.exceptions import BadRequestError, NotFoundError
+from services.exceptions import ForbiddenError, NotFoundError
 
 
 async def get_posts_service(db: AsyncSession) -> list[models.Post]:
@@ -32,30 +32,32 @@ async def create_post_service(
 
 
 async def update_post_full_service(
-    post_id: int, post_data: PostCreate, db: AsyncSession
+    post_id: int, post_data: PostCreate, user_id: int, db: AsyncSession
 ) -> models.Post:
     post = await posts.get_post_by_id_repo(post_id, db)
 
     if not post:
         raise NotFoundError("Post not found")
 
-    if post_data.user_id != post.user_id:
-        raise BadRequestError("User ID is diferent")
+    if post.user_id != user_id:
+        raise ForbiddenError("Not allowed to update this post")
 
     post.title = post_data.title
     post.content = post_data.content
-    post.user_id = post_data.user_id
 
     return await posts.save_post_repo(post, db)
 
 
 async def update_post_partial_service(
-    post_id: int, post_data: PostUpdate, db: AsyncSession
+    post_id: int, post_data: PostUpdate, user_id: int, db: AsyncSession
 ) -> models.Post:
     post = await posts.get_post_by_id_repo(post_id, db)
 
     if not post:
         raise NotFoundError("Post not found")
+
+    if post.user_id != user_id:
+        raise ForbiddenError("Not allowed to update this post")
 
     update_data = post_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -64,10 +66,13 @@ async def update_post_partial_service(
     return await posts.save_post_repo(post, db)
 
 
-async def delete_post_service(post_id: int, db: AsyncSession) -> None:
+async def delete_post_service(post_id: int, user_id: int, db: AsyncSession) -> None:
     post = await posts.get_post_by_id_repo(post_id, db)
 
     if not post:
         raise NotFoundError("Post not found")
+
+    if post.user_id != user_id:
+        raise ForbiddenError("Not allowed to delete this post")
 
     await posts.delete_post_repo(post, db)
