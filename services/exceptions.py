@@ -17,3 +17,8 @@ class UnauthorizedError(Exception):
     def __init__(self, detail: str = "Unauthorized"):
         self.detail = detail
         super().__init__(detail)
+
+class ForbiddenError(Exception):
+    def __init__(self, detail: str = "Forbidden"):
+        self.detail = detail
+        super().__init__(detail)
