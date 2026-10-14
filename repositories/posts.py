@@ -5,20 +5,20 @@ from sqlalchemy.orm import selectinload
 import models
 
 
-async def get_posts_repo(db: AsyncSession) -> list[models.Post]:
+async def get_posts_repo(user_id: int, db: AsyncSession) -> list[models.Post]:
     posts = (
         await db.execute(
-            select(models.Post).options(selectinload(models.Post.author))
+            select(models.Post).where(models.Post.user_id == user_id).options(selectinload(models.Post.author))
         )
     ).scalars().all()
     return list(posts)
 
 
-async def get_post_by_id_repo(post_id: int, db: AsyncSession) -> models.Post | None:
+async def get_post_by_id_repo(post_id: int, user_id: int, db: AsyncSession) -> models.Post | None:
     post = (
         await db.execute(
             select(models.Post)
-            .where(models.Post.id == post_id)
+            .where(models.Post.id == post_id, models.Post.user_id == user_id)
             .options(selectinload(models.Post.author))
         )
     ).scalars().first()

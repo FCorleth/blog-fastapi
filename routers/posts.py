@@ -13,14 +13,14 @@ router = APIRouter()
 
 
 @router.get("", response_model=list[PostResponse])
-async def get_posts(_current_user: CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
-    return await posts.get_posts_service(db)
+async def get_posts(current_user: CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
+    return await posts.get_posts_service(current_user, db)
 
 
 @router.get("/{post_id}", response_model=PostResponse)
-async def get_post(_current_user: CurrentUser, post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+async def get_post(current_user: CurrentUser, post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
     try:
-        return await posts.get_post_service(post_id, db)
+        return await posts.get_post_service(post_id, current_user, db)
     except NotFoundError as exception:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
