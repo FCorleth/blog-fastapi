@@ -1,20 +1,23 @@
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth import oauth2_scheme
 from database import get_db
-from schemas import PostResponse, UserCreate, UserResponse, UserUpdate
+from schemas import PostResponse, UserCreate, UserPublic, UserPrivate, UserUpdate, Token
 from services import users
-from services.exceptions import ConflictError, NotFoundError
+from services.exceptions import ConflictError, NotFoundError, UnauthorizedError
 
 router = APIRouter()
 
 
-@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=UserPrivate, status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_db)]):
     try:
-        return await users.create_user_service(user.username, user.email, db)
+        return await users.create_user_service(user.username, user.email, user.password, db)
     except ConflictError as exception:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -22,7 +25,37 @@ async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_
         )
 
 
-@router.get("/{user_id}", response_model=UserResponse)
+@router.post("/token", response_model=Token)
+async def login(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    try:
+        return await users.login_service(form_data, db)
+    except UnauthorizedError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=exception.detail,
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+
+@router.get("/me", response_model=UserPrivate)
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    try:
+        return await users.get_current_user_service(token, db)
+    except UnauthorizedError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=exception.detail,
+            headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+@router.get("/{user_id}", response_model=UserPublic)
 async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
     try:
         return await users.get_user_service(user_id, db)
@@ -33,7 +66,7 @@ async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
         )
 
 
-@router.patch("/{user_id}", response_model=UserResponse)
+@router.patch("/{user_id}", response_model=UserPrivate)
 async def update_user(
     user_id: int, user_data: UserUpdate, db: Annotated[AsyncSession, Depends(get_db)]
 ):

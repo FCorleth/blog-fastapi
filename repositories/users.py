@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
+from sqlalchemy import func
 
 
 async def get_user_by_id_repo(user_id: int, db: AsyncSession) -> models.User | None:
@@ -14,7 +15,7 @@ async def get_user_by_id_repo(user_id: int, db: AsyncSession) -> models.User | N
 
 async def get_user_by_username_repo(username: str, db: AsyncSession) -> models.User | None:
     user = (
-        await db.execute(select(models.User).where(models.User.username == username))
+        await db.execute(select(models.User).where(func.lower(models.User.username) == username.lower()))
     ).scalars().first()
 
     return user
@@ -22,16 +23,17 @@ async def get_user_by_username_repo(username: str, db: AsyncSession) -> models.U
 
 async def get_user_by_email_repo(email: str, db: AsyncSession) -> models.User | None:
     user = (
-        await db.execute(select(models.User).where(models.User.email == email))
+        await db.execute(select(models.User).where(func.lower(models.User.email)== email.lower()))
     ).scalars().first()
 
     return user
 
 
-async def create_user_repo(username: str, email: str, db: AsyncSession) -> models.User:
+async def create_user_repo(username: str, email: str, password: str, db: AsyncSession) -> models.User:
     user = models.User(
         username=username,
-        email=email,
+        email=email.lower(),
+        password_hash=password
     )
 
     db.add(user)

@@ -1,10 +1,55 @@
+from datetime import timedelta
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import settings
 from repositories import posts, users
 
 import models
-from schemas import UserUpdate
-from services.exceptions import ConflictError, NotFoundError
+from schemas import Token, UserUpdate
+from services.exceptions import ConflictError, NotFoundError, UnauthorizedError
+
+from auth import (
+    oauth2_scheme,
+    create_access_token,
+    hash_password,
+    verify_access_token,
+    verify_password
+)
+
+
+async def login_service(form_data: OAuth2PasswordRequestForm, db: AsyncSession):
+    user = await users.get_user_by_username_repo(form_data.username, db)
+
+    if not user or not verify_password(form_data.password, user.password_hash):
+        raise UnauthorizedError("User unauthorized")
+
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token = create_access_token(
+        data={"sub": str(user.id)},
+        expires_delta=access_token_expires
+    )
+
+    return Token(access_token=access_token, token_type="bearer")
+
+
+async def get_current_user_service(token: str, db: AsyncSession):
+    user_id = verify_access_token(token)
+
+    if user_id is None:
+        raise UnauthorizedError("User unauthorized")
+
+    try:
+        user_id_int = int(user_id)
+    except (ValueError, TypeError):
+        raise UnauthorizedError("User unauthorized")
+
+    user = await users.get_user_by_id_repo(user_id_int, db)
+
+    if user is None:
+        raise UnauthorizedError("User unauthorized")
+
+    return user
 
 
 async def get_user_service(user_id: int, db: AsyncSession) -> models.User:
@@ -17,7 +62,7 @@ async def get_user_service(user_id: int, db: AsyncSession) -> models.User:
 
 
 async def create_user_service(
-    username: str, email: str, db: AsyncSession
+    username: str, email: str, password: str, db: AsyncSession
 ) -> models.User:
     existing_user = await users.get_user_by_username_repo(username, db)
 
@@ -29,7 +74,9 @@ async def create_user_service(
     if existing_email:
         raise ConflictError("Email already exists")
 
-    new_user = await users.create_user_repo(username, email, db)
+    hashed_password = hash_password(password)
+
+    new_user = await users.create_user_repo(username, email, hashed_password, db)
 
     return new_user
 
