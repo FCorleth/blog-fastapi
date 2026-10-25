@@ -1,8 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
-from sqlalchemy import func
 
 
 async def get_user_by_id_repo(user_id: int, db: AsyncSession) -> models.User | None:
@@ -52,3 +51,14 @@ async def save_user_repo(user: models.User, db: AsyncSession) -> models.User:
 async def delete_user_repo(user: models.User, db: AsyncSession) -> None:
     await db.delete(user)
     await db.commit()
+
+async def upload_profile_picture_repo(new_filename: str, user: models.User, db: AsyncSession):
+    user.image_file = new_filename
+    await db.commit()
+    await db.refresh(user)
+
+async def delete_profile_picture_repo(user: models.User, db: AsyncSession) -> models.User:
+    user.image_file = None
+    await db.commit()
+    await db.refresh(user)
+    return user

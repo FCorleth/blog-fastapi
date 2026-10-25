@@ -1,13 +1,18 @@
 from datetime import timedelta
+
+from fastapi import UploadFile
 from fastapi.security import OAuth2PasswordRequestForm
+from PIL import UnidentifiedImageError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from config import settings
+from image_utils import delete_profile_image, process_profile_image
 from repositories import posts, users
 
 import models
 from schemas import Token, UserUpdate
-from services.exceptions import ConflictError, ForbiddenError, NotFoundError, UnauthorizedError
+from services.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError
 
 from auth import (
     create_access_token,
@@ -112,9 +117,6 @@ async def update_user_service(
 
         user.email = user_data.email
 
-    if user_data.image_file:
-        user.image_file = user_data.image_file
-
     return await users.save_user_repo(user, db)
 
 
@@ -127,7 +129,9 @@ async def delete_user_service(user_id: int, current_user: models.User, db: Async
     if user.id != current_user.id:
         raise ForbiddenError("Not authorized to delete this user")
 
+    image_filename = user.image_file
     await users.delete_user_repo(user, db)
+    delete_profile_image(image_filename)
 
 
 async def get_user_posts_service(user_id: int, db: AsyncSession) -> list[models.Post]:
@@ -142,3 +146,52 @@ async def get_user_posts_service(user_id: int, db: AsyncSession) -> list[models.
         raise NotFoundError("Posts not found")
 
     return existing_posts
+
+async def upload_profile_picture_service(
+    user_id: int,
+    file: UploadFile,
+    current_user: models.User,
+    db: AsyncSession
+):
+    if user_id != current_user.id:
+        raise ForbiddenError()
+
+    content = await file.read()
+
+    if len(content) > settings.max_upload_size_bytes:
+        raise BadRequestError(
+            f"File too large. Maximun size is {settings.max_upload_size_bytes // (1024 * 1024)} MB"
+    )
+
+    try:
+        new_filename = await run_in_threadpool(process_profile_image, content)
+    except UnidentifiedImageError:
+        raise BadRequestError(
+            "Invalid image file. Please upload a valid image (JPEG, PNG, GIF, WebP)."
+        )
+
+    old_filename = current_user.image_file
+
+    await users.upload_profile_picture_repo(new_filename, current_user, db)
+
+    if old_filename:
+        delete_profile_image(old_filename)
+
+    return current_user
+
+async def delete_profile_picture_service(
+    user_id:int,
+    current_user: models.User,
+    db: AsyncSession
+):
+    if user_id != current_user.id:
+        raise ForbiddenError()
+    
+    old_filename = current_user.image_file
+
+    if old_filename is None:
+        raise BadRequestError("User has no profile picture")
+
+    await users.delete_profile_picture_repo(current_user, db)
+    delete_profile_image(old_filename)
+

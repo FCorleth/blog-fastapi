@@ -1,7 +1,6 @@
-from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +8,13 @@ from auth import CurrentUser
 from database import get_db
 from schemas import PostResponse, UserCreate, UserPublic, UserPrivate, UserUpdate, Token
 from services import users
-from services.exceptions import ConflictError, ForbiddenError, NotFoundError, UnauthorizedError
+from services.exceptions import (
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    UnauthorizedError,
+)
 
 router = APIRouter()
 
@@ -107,4 +112,46 @@ async def get_user_posts(user_id: int, db: Annotated[AsyncSession, Depends(get_d
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=exception.detail,
+        )
+
+@router.patch("/{user_id}/picture", response_model=UserPrivate)
+async def upload_profile_picture(
+    user_id: int,
+    file: UploadFile,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        return await users.upload_profile_picture_service(
+            user_id, file, current_user, db
+        )
+    except BadRequestError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exception.detail
+        )
+    except ForbiddenError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=exception.detail
+        )
+
+@router.delete("/{user_id}/picture", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_profile_picture(user_id: int, current_user: CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
+    try:
+        return await users.delete_profile_picture_service(user_id, current_user, db)
+    except BadRequestError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exception.detail
+        )
+    except NotFoundError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=exception.detail
+        )
+    except ForbiddenError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=exception.detail
         )
